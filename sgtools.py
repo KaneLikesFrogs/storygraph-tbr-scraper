@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup as soup # used for distilling web pages
 import concurrent.futures # used for paralellism of submitting web requests
 import csv # used for breaking down export file
 import time # used for waiting to avoid getting shut out for bot behaviour
-import sys
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -94,7 +93,7 @@ def get_tbr(path) -> list:
         reader = csv.DictReader(file)
         for row in reader:
             if row['Read Status'] == 'to-read':
-                x = f'{row['Title']} by {row['Authors']}'
+                x = f'{row['Title']} by {row['Authors']}'.replace("'",' ')
                 tbr.append(x) 
     return(tbr)
 
@@ -194,7 +193,7 @@ def ku_main(path = ""):
     input("\nHit return/enter key to close this window")
 
 def get_lib_availability(driver,item,location) -> list: # returns LIST of matches (for multiple format availability)
-    query = f'{item[0]} {item[1]}'.replace("'",' ')
+    query = f'{item[0]} {item[1]}'
     url = f'https://libbyapp.com/search/{location}/search/query-{query}/page-1'
     data = load_page(driver,url,"div[class='chaining-block show']")
     response = soup(data,'html.parser')
@@ -246,8 +245,8 @@ def libby_main(path = "",location = ""):
         reader = csv.DictReader(file)
         for row in reader:
             if row['Read Status'] == 'to-read':
-                x = f'{row['Title']}' 
-                y = f'{row['Authors']}'
+                x = f'{row['Title']}'.replace("'",' ') 
+                y = f'{row['Authors']}'.replace("'",' ')
                 tbr.append([x,y]) 
     available = []
     chunkSize = 45
@@ -257,8 +256,7 @@ def libby_main(path = "",location = ""):
         libOut = [executor.submit(lib_chunk,tbri,location) for tbri in chunkedtbr]
         for lib in libOut:
             available = available + lib.result()
-    # available= lib_chunk(chunkedtbr[0],location)
-    # want to paraellise 
+
     try:
         dest = path[:path.rindex('/')]
     except:
@@ -272,7 +270,40 @@ def libby_main(path = "",location = ""):
         file.write(f'{len(get_tbr(path))} titles checked')
     print(f"File saved to {dest}")
     input("\nHit return/enter key to close this window")
-    
+
+def get_bbox_availability(driver,item,location) -> list: # returns LIST of matches (for multiple format availability)
+    query = f'{item[0]} {item[1]}'
+    url = f'https://{location}.borrowbox.com/search?q={query}'
+    data = load_page(driver,url,"div[class='product-list']")
+    response = soup(data,'html.parser')
+    matches = response.find_all("div",{"class":"information"})
+    output = []
+    try:
+        for x in matches:
+            title = x.find("div",{"class":"title"})
+            author = x.find("div",{"class":"author"}).text
+            status = x.find("div",{"class":"availability"}).text
+            link = title.find("a")['href']
+            title = title['title']
+            link = f'https://{location}.borrowbox.com{link}'
+            if title.lower() == item[0].lower():
+                print(f'{title} \t {link} \t {status}')
+                out = f'{title} by {author} \t {link} \t {status}'
+                output.append(out)
+    except Exception as ex:
+        print(f"could not find desired elements {ex}")
+        return([])
+    return(output)
+
+def bbox_chunk(chunk,location) -> list:
+    print(f'attempting chunk leading w: {chunk[0]}')
+    driver = load_driver()
+    available = []
+    for item in chunk:
+        available = available + get_bbox_availability(driver,item,location)
+    driver.quit()
+    return available
+
 def bbox_main(path ="",location = ""):
     active = True
     if path == "":
@@ -289,18 +320,39 @@ def bbox_main(path ="",location = ""):
     if location == "":
         print("Please enter your borrow box location (e.g MiltonKeynes)")
         location = input("\tGo to borrow box and check what the URL is for your location to find this value\n").replace(' ','').lower()
-    tbr = get_tbr(path)
+    with open(path,encoding="utf8") as file:
+        tbr = []
+        reader = csv.DictReader(file)
+        for row in reader:
+            if row['Read Status'] == 'to-read':
+                x = f'{row['Title']}'.replace("'",' ').replace('.',' ')
+                y = f'{row['Authors']}'.replace("'",' ').replace('.',' ')
+                tbr.append([x,y]) 
     available = []
-    example = tbr[0]
-    example = 'project hail mary by andy weir'
-    data = get_response(f'https://{location}.borrowbox.com/search?q={example.replace('.',' ')}')
-    with open('BorrowBoxExample.html','x') as file:
-        file.write(data)
+    chunkSize = 45
+    chunkedtbr = [tbr[x:x+chunkSize] for x in range(0,len(tbr),chunkSize)] # chunk response into smaller lists
+    print(f'{len(chunkedtbr)} chunks made from tbr')
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        bbOut = [executor.submit(bbox_chunk,tbri,location) for tbri in chunkedtbr]
+        for bb in bbOut:
+            available = available + bb.result()
 
+    try:
+        dest = path[:path.rindex('/')]
+    except:
+        dest = path[:path.rindex('\\')+1]
+    dest = dest + "/BorrowBoxCollection.txt"
+    with open(dest,"w") as file: 
+        for x in available:
+            print(x)
+            file.write(x + ' \n')
+        print(f"({len(tbr)} titles checked)")
+        file.write(f'{len(get_tbr(path))} titles checked')
+    print(f"File saved to {dest}")
+    input("\nHit return/enter key to close this window")
 
-path = 'C:/Software/StorygraphTBR/abbydata2.csv'
-location = 'miltonkeynesuk'
-loc2 = 'miltonkeynes'
-libby_main(path,location)
-# ku_main(path)
-# bbox_main(path,loc2)
+path = 'C:\Software\StorygraphTBR\FriendData.csv'
+location = 'miltonkeynes'
+# location = 'miltonkeynesuk'
+bbox_main(path,location)
+
