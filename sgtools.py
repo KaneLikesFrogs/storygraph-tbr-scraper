@@ -272,7 +272,7 @@ def libby_main(path = "",location = ""):
     input("\nHit return/enter key to close this window")
 
 def get_bbox_availability(driver,item,location) -> list: # returns LIST of matches (for multiple format availability)
-    query = f'{item[0]} {item[1]}'
+    query = f'{item[0]} {item[1]}'.replace("'","%27")
     url = f'https://{location}.borrowbox.com/search?q={query}'
     data = load_page(driver,url,"div[class='product-list']")
     response = soup(data,'html.parser')
@@ -282,16 +282,19 @@ def get_bbox_availability(driver,item,location) -> list: # returns LIST of match
         for x in matches:
             title = x.find("div",{"class":"title"})
             author = x.find("div",{"class":"author"}).text
-            status = x.find("div",{"class":"availability"}).text
             link = title.find("a")['href']
             title = title['title']
             link = f'https://{location}.borrowbox.com{link}'
+            try:
+                status = x.find("div",{"class":"availability"}).text
+            except:
+                status = "Available"
             if title.lower() == item[0].lower():
                 print(f'{title} \t {link} \t {status}')
                 out = f'{title} by {author} \t {link} \t {status}'
                 output.append(out)
     except Exception as ex:
-        print(f"could not find desired elements {ex}")
+        print(f"could not find desired elements {ex} at {url}")
         return([])
     return(output)
 
@@ -326,7 +329,7 @@ def bbox_main(path ="",location = ""):
         for row in reader:
             if row['Read Status'] == 'to-read':
                 x = f'{row['Title']}'.replace("'",' ').replace('.',' ')
-                y = f'{row['Authors']}'.replace("'",' ').replace('.',' ')
+                y = f'{row['Authors']}'.replace('.',' ')
                 tbr.append([x,y]) 
     available = []
     chunkSize = 45
@@ -351,7 +354,7 @@ def bbox_main(path ="",location = ""):
     print(f"File saved to {dest}")
     input("\nHit return/enter key to close this window")
 
-path = 'C:\Software\StorygraphTBR\FriendData.csv'
+path = 'C:/Data/Design/WebExperiments/storygraphtbr/abbydata.csv'
 location = 'miltonkeynes'
 # location = 'miltonkeynesuk'
 bbox_main(path,location)
