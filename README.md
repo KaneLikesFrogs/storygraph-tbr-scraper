@@ -25,6 +25,9 @@ webdriver_manager
 
 To use this can either just run run the libby_main() or ku_main() functions without any arguments. Alternatively can manually enter value(s) for paths to your sg export and libby library location to avoid being queried every time the function is ran
 
+I have also added a seperate folder containing tools for comparing multiple users. This can be used for finding books that people read and agree/disagree on (based on rating). It can also be used for finding most common authors and common books on TBR lists. This is mainly intended for usage with book clubs though should work for comparing any number of users (though requires some adjusting of the queries to comment/uncomment different requests)
+
+
 The following items are on the to do list : 
 
 - Add functionality for borrow box as well
