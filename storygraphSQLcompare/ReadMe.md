@@ -1,6 +1,6 @@
 # Queries and Examples
 
-In this file I have snipped some of the queries and the sort of outputs they give. In cases with lots of inputs I have trimmed the table. The example outputs are based on the example data to help make it repeatable
+In this file I have snipped some of the queries and the sort of outputs they give. In cases with lots of inputs I have trimmed the table. The example outputs are based on the example data to help make it repeatable/provide a better example
 
 The outputs will be in lowercase to help homogenize the data as when testing some editions of the same book had different capitlisation which led to some instances not being counted as expected 
 
